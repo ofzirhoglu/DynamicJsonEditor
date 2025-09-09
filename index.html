@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dinamik JSON Editörü</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .field-container {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #f8f9fa;
+        }
+        .nested-container {
+            border-left: 3px solid #007bff;
+            padding-left: 15px;
+            margin-left: 10px;
+        }
+        .array-item {
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: white;
+        }
+        .btn-sm-custom {
+            font-size: 0.775rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .field-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #495057;
+        }
+        .json-preview {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .validation-error {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 5px;
+        }
+        .type-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-edit"></i> JSON Editörü</h5>
+                        <div>
+                            <button class="btn btn-success btn-sm me-2" onclick="loadSampleData()">
+                                <i class="fas fa-download"></i> Örnek Veri Yükle
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="addRootField()">
+                                <i class="fas fa-plus"></i> Ana Alan Ekle
+                            </button>
+                        </div>
+    <!-- Silme Onay Modalı -->
+    <!-- Uyarı Modalı -->
+    <div class="modal fade" id="alertModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Uyarı</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="alertModalMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Tamam</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Silme Onayı</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Silmek istediğinizden emin misiniz?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-danger" id="deleteConfirmBtn">Sil</button>
+                </div>
+            </div>
+        </div>
+    </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="json-form">
+                            <!-- Form alanları buraya gelecek -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-code"></i> JSON Önizleme</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="json-preview">
+                            <pre id="json-output">{}</pre>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-outline-primary btn-sm me-2" onclick="copyToClipboard()">
+                                <i class="fas fa-copy"></i> Kopyala
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" onclick="validateJson()">
+                                <i class="fas fa-check"></i> Doğrula
+                            </button>
+                        </div>
+                        <div id="validation-result" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Field Modal -->
+    <div class="modal fade" id="fieldModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Alan Ekle/Düzenle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="fieldForm">
+                        <div class="mb-3">
+                            <label class="form-label">Alan Adı *</label>
+                            <input type="text" class="form-control" id="fieldName" required>
+                            <div class="form-text">JSON için geçerli bir anahtar adı giriniz</div>
+                            <div id="fieldNameError" class="validation-error"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Alan Tipi *</label>
+                            <select class="form-select" id="fieldType" onchange="handleTypeChange()">
+                                <option value="string">String (Metin)</option>
+                                <option value="number">Number (Sayı)</option>
+                                <option value="boolean">Boolean (Doğru/Yanlış)</option>
+                                <option value="array">Array (Dizi)</option>
+                                <option value="object">Object (Nesne)</option>
+                                <option value="null">Null</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="valueField">
+                            <label class="form-label">Değer</label>
+                            <input type="text" class="form-control" id="fieldValue">
+                            <div class="form-text">Alan değerini giriniz</div>
+                        </div>
+                        <div class="mb-3" id="booleanField" style="display: none;">
+                            <label class="form-label">Boolean Değer</label>
+                            <select class="form-select" id="booleanValue">
+                                <option value="true">True</option>
+                                <option value="false">False</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="arrayTypeField" style="display: none;">
+                            <label class="form-label">Dizi Element Tipi</label>
+                            <select class="form-select" id="arrayElementType">
+                                <option value="string">String</option>
+                                <option value="number">Number</option>
+                                <option value="boolean">Boolean</option>
+                                <option value="object">Object</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" onclick="saveField()">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let jsonData = {};
+        let currentPath = '';
+        let editingField = null;
+        let modalInstance = null;
+
+        // Örnek veriyi yükle
+        function loadSampleData() {
+            jsonData = {
+                "id": 1,
+                "name": "Ali Demir",
+                "email": "ali.demir@example.com",
+                "phone": "+90 532 123 45 67",
+                "addresses": [
+                    {
+                        "type": "home",
+                        "street": "Atatürk Cad. No:45",
+                        "city": "İstanbul",
+                        "country": "Türkiye",
+                        "postalCode": "34000"
+                    },
+                    {
+                        "type": "work",
+                        "street": "Teknopark Sok. No:12",
+                        "city": "İstanbul",
+                        "country": "Türkiye",
+                        "postalCode": "34906"
+                    }
+                ],
+                "roles": ["developer", "admin"]
+            };
+            renderForm();
+            updatePreview();
+        }
+
+        // Form render et
+        function renderForm() {
+            const container = document.getElementById('json-form');
+            container.innerHTML = '';
+            renderObject(jsonData, '', container);
+        }
+
+        // Nesne render et
+        function renderObject(obj, path, container) {
+            for (const [key, value] of Object.entries(obj)) {
+                const currentPath = path ? `${path}.${key}` : key;
+                const fieldContainer = document.createElement('div');
+                fieldContainer.className = 'field-container';
+                
+                const header = document.createElement('div');
+                header.className = 'field-header';
+                header.innerHTML = `
+                    <div>
+                        <span class="badge bg-info type-badge">${getTypeLabel(value)}</span>
+                        <strong>${key}</strong>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-primary btn-sm-custom me-1" onclick="editField('${currentPath}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm-custom" onclick="deleteField('${currentPath}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                fieldContainer.appendChild(header);
+
+                if (Array.isArray(value)) {
+                    renderArray(value, currentPath, fieldContainer);
+                } else if (typeof value === 'object' && value !== null) {
+                    const nestedContainer = document.createElement('div');
+                    nestedContainer.className = 'nested-container';
+                    renderObject(value, currentPath, nestedContainer);
+                    
+                    const addBtn = document.createElement('button');
+                    addBtn.className = 'btn btn-success btn-sm mt-2';
+                    addBtn.innerHTML = '<i class="fas fa-plus"></i> Alt Alan Ekle';
+                    addBtn.onclick = () => showFieldModal(currentPath);
+                    nestedContainer.appendChild(addBtn);
+                    
+                    fieldContainer.appendChild(nestedContainer);
+                } else {
+                    const valueContainer = document.createElement('div');
+                    valueContainer.innerHTML = `
+                        <input type="${getInputType(value)}" class="form-control" 
+                               value="${value}" onchange="updateValue('${currentPath}', this.value, '${typeof value}')">
+                    `;
+                    fieldContainer.appendChild(valueContainer);
+                }
+
+                container.appendChild(fieldContainer);
+            }
+        }
+
+        // Dizi render et
+        function renderArray(arr, path, container) {
+            const arrayContainer = document.createElement('div');
+            arrayContainer.className = 'nested-container';
+            
+            arr.forEach((item, index) => {
+                const itemContainer = document.createElement('div');
+                itemContainer.className = 'array-item';
+
+                const itemHeader = document.createElement('div');
+                itemHeader.className = 'field-header';
+                itemHeader.innerHTML = `
+                    <div>
+                        <span class="badge bg-secondary type-badge">[${index}]</span>
+                        <span class="badge bg-info type-badge">${getTypeLabel(item)}</span>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-danger btn-sm-custom" onclick="deleteArrayItem('${path}', ${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                itemContainer.appendChild(itemHeader);
+
+                const currentPath = `${path}[${index}]`;
+
+                if (Array.isArray(item)) {
+                    renderArray(item, currentPath, itemContainer);
+                } else if (typeof item === 'object' && item !== null) {
+                    const nestedContainer = document.createElement('div');
+                    renderObject(item, currentPath, nestedContainer);
+                    // Her nesne (object) için alt alan ekle butonu
+                    const addBtn = document.createElement('button');
+                    addBtn.className = 'btn btn-success btn-sm mt-2';
+                    addBtn.innerHTML = '<i class="fas fa-plus"></i> Alt Alan Ekle';
+                    addBtn.onclick = () => showFieldModal(currentPath);
+                    nestedContainer.appendChild(addBtn);
+                    itemContainer.appendChild(nestedContainer);
+                } else {
+                    const valueContainer = document.createElement('div');
+                    valueContainer.innerHTML = `
+                        <input type="${getInputType(item)}" class="form-control" 
+                               value="${item}" onchange="updateArrayValue('${path}', ${index}, this.value, '${typeof item}')">
+                    `;
+                    itemContainer.appendChild(valueContainer);
+                }
+
+                arrayContainer.appendChild(itemContainer);
+            });
+
+            // Dizi boşsa, tip seçip eleman ekle
+            if (arr.length === 0) {
+                const emptyInfo = document.createElement('div');
+                emptyInfo.className = 'text-muted mb-2';
+                emptyInfo.textContent = 'Dizi boş. Eleman ekleyin:';
+                arrayContainer.appendChild(emptyInfo);
+
+                const addBtn = document.createElement('button');
+                addBtn.className = 'btn btn-success btn-sm';
+                addBtn.innerHTML = '<i class="fas fa-plus"></i> Dizi Elemanı Ekle';
+                addBtn.onclick = () => addArrayItemWithType(path);
+                arrayContainer.appendChild(addBtn);
+            } else {
+                const addBtn = document.createElement('button');
+                addBtn.className = 'btn btn-success btn-sm';
+                addBtn.innerHTML = '<i class="fas fa-plus"></i> Dizi Elemanı Ekle';
+                addBtn.onclick = () => addArrayItem(path);
+                arrayContainer.appendChild(addBtn);
+            }
+
+            container.appendChild(arrayContainer);
+        }
+        // Boş diziye tip seçerek eleman ekle
+        function addArrayItemWithType(path) {
+            const type = prompt('Eklenecek eleman tipi (string, number, boolean, object, array, null):', 'string');
+            let defaultValue = '';
+            if (type === 'number') defaultValue = 0;
+            else if (type === 'boolean') defaultValue = false;
+            else if (type === 'object') defaultValue = {};
+            else if (type === 'array') defaultValue = [];
+            else if (type === 'null') defaultValue = null;
+            else defaultValue = '';
+            const arr = getValueByPath(path);
+            arr.push(defaultValue);
+            renderForm();
+            updatePreview();
+        }
+
+        // Tip etiketi al
+        function getTypeLabel(value) {
+            if (Array.isArray(value)) return 'Array';
+            if (value === null) return 'Null';
+            if (typeof value === 'object') return 'Object';
+            return typeof value;
+        }
+
+        // Input tipi al
+        function getInputType(value) {
+            if (typeof value === 'number') return 'number';
+            if (typeof value === 'boolean') return 'checkbox';
+            return 'text';
+        }
+
+        // Değer güncelle
+        function updateValue(path, value, type) {
+            const keys = path.split('.');
+            let current = jsonData;
+            
+            for (let i = 0; i < keys.length - 1; i++) {
+                current = current[keys[i]];
+            }
+            
+            const convertedValue = convertValue(value, type);
+            current[keys[keys.length - 1]] = convertedValue;
+            updatePreview();
+        }
+
+        // Dizi değeri güncelle
+        function updateArrayValue(path, index, value, type) {
+            const obj = getValueByPath(path);
+            obj[index] = convertValue(value, type);
+            updatePreview();
+        }
+
+        // Değer dönüştür
+        // Path'i ['addresses', 0, 'alan'] gibi bir diziye çevirir
+        function parsePath(path) {
+            const regex = /([^[.\]]+)|\[(\d+)\]/g;
+            const result = [];
+            let match;
+            while ((match = regex.exec(path))) {
+                if (match[1]) result.push(match[1]);
+                if (match[2]) result.push(Number(match[2]));
+            }
+            return result;
+        }
+        function convertValue(value, type) {
+            switch (type) {
+                case 'number':
+                    return isNaN(value) ? 0 : Number(value);
+                case 'boolean':
+                    return value === 'true' || value === true;
+                case 'null':
+                    return null;
+                default:
+                    return value;
+            }
+        }
+
+        // Path ile değer al
+        function getValueByPath(path) {
+            const keys = parsePath(path);
+            let current = jsonData;
+            for (const key of keys) {
+                current = current[key];
+            }
+            return current;
+        }
+
+        // Alan modal göster
+        function showFieldModal(path = '') {
+            currentPath = path;
+            editingField = null;
+            
+            // Form'u temizle
+            document.getElementById('fieldForm').reset();
+            document.getElementById('fieldName').value = '';
+            document.getElementById('fieldName').disabled = false;
+            document.getElementById('fieldType').value = 'string';
+            document.getElementById('fieldType').disabled = false;
+            handleTypeChange();
+            
+            if (!modalInstance) {
+                modalInstance = new bootstrap.Modal(document.getElementById('fieldModal'));
+            }
+            modalInstance.show();
+        }
+
+        // Ana alan ekle
+        function addRootField() {
+            showFieldModal('');
+        }
+
+        // Alan düzenle
+        function editField(path) {
+            const value = getValueByPath(path);
+            const keys = parsePath(path);
+            const fieldName = keys[keys.length - 1];
+
+            editingField = path;
+            // currentPath: bir üst path (ör: addresses[0].alan -> addresses[0])
+            if (keys.length > 1) {
+                let parentPath = '';
+                for (let i = 0; i < keys.length - 1; i++) {
+                    if (typeof keys[i] === 'number') {
+                        parentPath += `[${keys[i]}]`;
+                    } else {
+                        if (parentPath) parentPath += '.';
+                        parentPath += keys[i];
+                    }
+                }
+                currentPath = parentPath;
+            } else {
+                currentPath = '';
+            }
+
+            document.getElementById('fieldName').value = fieldName;
+            document.getElementById('fieldName').disabled = true;
+            document.getElementById('fieldType').value = getTypeLabel(value).toLowerCase();
+            document.getElementById('fieldType').disabled = true;
+
+            if (typeof value === 'boolean') {
+                document.getElementById('booleanValue').value = value.toString();
+            } else if (!Array.isArray(value) && typeof value !== 'object') {
+                document.getElementById('fieldValue').value = value;
+            }
+
+            handleTypeChange();
+
+            if (!modalInstance) {
+                modalInstance = new bootstrap.Modal(document.getElementById('fieldModal'));
+            }
+            modalInstance.show();
+        }
+
+        // Tip değişikliği işle
+        function handleTypeChange() {
+            const type = document.getElementById('fieldType').value;
+            const valueField = document.getElementById('valueField');
+            const booleanField = document.getElementById('booleanField');
+            const arrayTypeField = document.getElementById('arrayTypeField');
+            
+            valueField.style.display = 'block';
+            booleanField.style.display = 'none';
+            arrayTypeField.style.display = 'none';
+            
+            if (type === 'boolean') {
+                valueField.style.display = 'none';
+                booleanField.style.display = 'block';
+            } else if (type === 'array') {
+                valueField.style.display = 'none';
+                arrayTypeField.style.display = 'block';
+            } else if (type === 'object' || type === 'null') {
+                valueField.style.display = 'none';
+            }
+        }
+
+        // Alan kaydet
+        function saveField() {
+            const name = document.getElementById('fieldName').value.trim();
+            const type = document.getElementById('fieldType').value;
+
+            // Hata mesajını temizle
+            document.getElementById('fieldNameError').textContent = '';
+            if (!name) {
+                document.getElementById('fieldNameError').textContent = 'Alan adı gereklidir!';
+                return false;
+            }
+
+            if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name)) {
+                document.getElementById('fieldNameError').textContent = 'Geçersiz alan adı! Sadece harf, rakam, _ ve $ kullanılabilir.';
+                return false;
+            }
+
+            // Aynı dizinde aynı isimde alan var mı kontrolü
+            let parentObj = jsonData;
+            if (currentPath) {
+                parentObj = getValueByPath(currentPath);
+            }
+            if (!editingField && parentObj && typeof parentObj === 'object' && !Array.isArray(parentObj) && Object.prototype.hasOwnProperty.call(parentObj, name)) {
+                document.getElementById('fieldNameError').textContent = 'Bu alan adı zaten var!';
+                return false;
+            }
+
+            let value;
+
+            switch (type) {
+                case 'string':
+                    value = document.getElementById('fieldValue').value || '';
+                    break;
+                case 'number':
+                    const numValue = document.getElementById('fieldValue').value;
+                    value = numValue === '' ? 0 : Number(numValue);
+                    if (isNaN(value)) {
+                        showAlertModal('Geçersiz sayı değeri!');
+                        return false;
+                    }
+                    break;
+                case 'boolean':
+                    value = document.getElementById('booleanValue').value === 'true';
+                    break;
+                case 'array':
+                    const elementType = document.getElementById('arrayElementType').value;
+                    value = [];
+                    // İlk elemanı ekle
+                    if (elementType === 'string') value.push('');
+                    else if (elementType === 'number') value.push(0);
+                    else if (elementType === 'boolean') value.push(false);
+                    else if (elementType === 'object') value.push({});
+                    else if (elementType === 'array') value.push([]);
+                    else if (elementType === 'null') value.push(null);
+                    break;
+                case 'object':
+                    value = {};
+                    break;
+                case 'null':
+                    value = null;
+                    break;
+            }
+        // Uyarı modalını gösteren fonksiyon
+        let alertModalInstance = null;
+        function showAlertModal(message) {
+            document.getElementById('alertModalMessage').textContent = message;
+            if (!alertModalInstance) {
+                alertModalInstance = new bootstrap.Modal(document.getElementById('alertModal'));
+            }
+            alertModalInstance.show();
+        }
+
+            if (editingField) {
+                // Edit modunda, anahtar adı değişmediyse sadece değeri güncelle
+                const oldKeys = parsePath(editingField);
+                const oldFieldName = oldKeys[oldKeys.length - 1];
+                if (oldFieldName === name) {
+                    setValueByPath(editingField, value);
+                } else {
+                    // Anahtar adı değiştiyse eskiyi sil, yeniyi ekle
+                    doDeleteField(editingField, false);
+                    setValueByPath(currentPath ? `${currentPath}.${name}` : name, value);
+                }
+            } else {
+                // Yeni alan ekle
+                const targetPath = currentPath ? `${currentPath}.${name}` : name;
+                setValueByPath(targetPath, value);
+            }
+
+            modalInstance.hide();
+            renderForm();
+            updatePreview();
+        }
+
+        // Path ile değer set et
+        function setValueByPath(path, value) {
+            const keys = parsePath(path);
+            let current = jsonData;
+            for (let i = 0; i < keys.length - 1; i++) {
+                if (typeof keys[i + 1] === 'number') {
+                    if (!Array.isArray(current[keys[i]])) current[keys[i]] = [];
+                } else {
+                    if (!current[keys[i]]) current[keys[i]] = {};
+                }
+                current = current[keys[i]];
+            }
+            current[keys[keys.length - 1]] = value;
+        }
+
+        // Alan sil
+        function deleteField(path, refresh = true) {
+            showDeleteConfirmModal(path, refresh);
+        }
+
+        // Silme onay modalını göster
+        let deletePendingPath = null;
+        let deletePendingRefresh = true;
+        let deleteModalInstance = null;
+        function showDeleteConfirmModal(path, refresh) {
+            deletePendingPath = path;
+            deletePendingRefresh = refresh;
+            if (!deleteModalInstance) {
+                deleteModalInstance = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+            }
+            deleteModalInstance.show();
+        }
+
+        // Modal sil butonuna tıklanınca gerçek silme işlemi
+        document.addEventListener('DOMContentLoaded', function() {
+            const btn = document.getElementById('deleteConfirmBtn');
+            if (btn) {
+                btn.addEventListener('click', function() {
+                    if (deletePendingPath !== null) {
+                        doDeleteField(deletePendingPath, deletePendingRefresh);
+                        deletePendingPath = null;
+                        deleteModalInstance.hide();
+                    }
+                });
+            }
+        });
+
+        function doDeleteField(path, refresh = true) {
+            const keys = parsePath(path);
+            let current = jsonData;
+            for (let i = 0; i < keys.length - 1; i++) {
+                current = current[keys[i]];
+            }
+            if (typeof keys[keys.length - 1] === 'number' && Array.isArray(current)) {
+                current.splice(keys[keys.length - 1], 1);
+            } else {
+                delete current[keys[keys.length - 1]];
+            }
+            if (refresh) {
+                renderForm();
+                updatePreview();
+            }
+    }
+
+        // Dizi elemanı ekle
+        function addArrayItem(path) {
+            const arr = getValueByPath(path);
+            
+            // Mevcut elemanların tipine göre varsayılan değer
+            let defaultValue = '';
+            if (arr.length > 0) {
+                const firstItem = arr[0];
+                if (typeof firstItem === 'number') defaultValue = 0;
+                else if (typeof firstItem === 'boolean') defaultValue = false;
+                else if (Array.isArray(firstItem)) defaultValue = [];
+                else if (typeof firstItem === 'object') defaultValue = {};
+                else defaultValue = '';
+            }
+            
+            arr.push(defaultValue);
+            renderForm();
+            updatePreview();
+        }
+
+        // Dizi elemanı sil
+        function deleteArrayItem(path, index) {
+            const arr = getValueByPath(path);
+            arr.splice(index, 1);
+            renderForm();
+            updatePreview();
+        }
+
+        // Önizleme güncelle
+        function updatePreview() {
+            const output = document.getElementById('json-output');
+            output.textContent = JSON.stringify(jsonData, null, 2);
+        }
+
+        // Panoya kopyala
+        function copyToClipboard() {
+            const jsonText = JSON.stringify(jsonData, null, 2);
+            navigator.clipboard.writeText(jsonText).then(() => {
+                alert('JSON panoya kopyalandı!');
+            });
+        }
+
+        // JSON doğrula
+        function validateJson() {
+            const result = document.getElementById('validation-result');
+            try {
+                JSON.stringify(jsonData);
+                result.innerHTML = '<div class="alert alert-success alert-sm">✅ JSON geçerli!</div>';
+            } catch (error) {
+                result.innerHTML = `<div class="alert alert-danger alert-sm">❌ Hata: ${error.message}</div>`;
+            }
+        }
+
+        // Sayfa yüklendiğinde örnek veriyi yükle
+        window.onload = function() {
+            loadSampleData();
+        };
+    </script>
+</body>
+</html>
