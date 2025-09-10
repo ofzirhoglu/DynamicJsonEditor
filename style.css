@@ -1,0 +1,81 @@
+/* Custom styles for Dynamic JSON Editor */
+body.dark {
+    background: #181a1b;
+    color: #e0e0e0;
+}
+body.dark .card,
+body.dark .form-control,
+body.dark .form-select,
+body.dark .modal-content,
+body.dark .json-preview,
+body.dark .field-container,
+body.dark .nested-container,
+body.dark .array-item {
+    background: #23272b;
+    color: #e0e0e0;
+    border-color: #343a40;
+}
+body.dark .btn-primary,
+body.dark .btn-success,
+body.dark .btn-danger,
+body.dark .btn-secondary {
+    color: #fff;
+}
+body.dark .btn-outline-dark,
+body.dark .btn-outline-dark:active,
+body.dark .btn-outline-dark:focus,
+body.dark .btn-outline-dark:hover {
+    color: #fff !important;
+    border-color: #fff !important;
+}
+body.dark .btn-outline-dark i {
+    color: #fff !important;
+}
+.field-container {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 15px;
+    margin-bottom: 15px;
+    background: #f8f9fa;
+}
+.nested-container {
+    border-left: 3px solid #007bff;
+    padding-left: 15px;
+    margin-left: 10px;
+}
+.array-item {
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: white;
+}
+.btn-sm-custom {
+    font-size: 0.775rem;
+    padding: 0.25rem 0.5rem;
+}
+.field-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #495057;
+}
+.json-preview {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 15px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+.validation-error {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 5px;
+}
+.type-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
